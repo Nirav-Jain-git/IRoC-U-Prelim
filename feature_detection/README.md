@@ -14,10 +14,6 @@ are combined into a fusion score, which determines the final validation decision
 
 
 <img width="1196" height="512" alt="image" src="https://github.com/user-attachments/assets/7645ad8e-ba6a-41d4-8865-79c4df1781a3" />
-Input: 
-<img width="522" height="414" alt="image1" src="https://github.com/user-attachments/assets/81f8dbf3-7114-499d-8735-a05c38c5922e" />
-Output:
-![val2](https://github.com/user-attachments/assets/4db4e016-e28e-4f2a-b47c-ecd6f6a55103)
 
 
 
