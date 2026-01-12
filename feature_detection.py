@@ -5,27 +5,18 @@ import torchvision.transforms as T
 from torchvision import models
 from torch.nn import functional as F
 
-# ============================================================
-# SAFETY
-# ============================================================
 cv2.setNumThreads(1)
 torch.set_num_threads(1)
 
 DEVICE = "cpu"
 
-# ============================================================
-# PATHS
-# ============================================================
 SEED_PATHS = [
     "seed/image4.png",
     "seed/image3.png"
 ]
 
-VIDEO_PATH = "vid/vid1.mp4"
+VIDEO_PATH = "output2.mp4"
 
-# ============================================================
-# PARAMETERS (FINAL TUNED)
-# ============================================================
 WINDOW_SIZES = [224, 320]
 STRIDE_RATIO = 0.5
 
@@ -39,9 +30,6 @@ DIST_THRESH = 120
 CONFIRM_FRAMES = 2
 RELATIVE_MARGIN = 0.02
 
-# ============================================================
-# CNN EMBEDDING MODEL
-# ============================================================
 model = models.mobilenet_v2(
     weights=models.MobileNet_V2_Weights.IMAGENET1K_V1
 )
@@ -65,9 +53,6 @@ def embed(img):
         f = model(t)
     return F.normalize(f, dim=1)
 
-# ============================================================
-# GEOMETRY HELPERS
-# ============================================================
 def iou(a, b):
     xA = max(a[0], b[0])
     yA = max(a[1], b[1])
@@ -85,9 +70,6 @@ def dist(a, b):
     c1, c2 = center(a), center(b)
     return np.hypot(c1[0]-c2[0], c1[1]-c2[1])
 
-# ============================================================
-# LOAD SEEDS & ADAPTIVE THRESHOLD
-# ============================================================
 seed_embs = []
 for p in SEED_PATHS:
     img = cv2.imread(p)
@@ -104,9 +86,6 @@ SIM_THRESHOLD = intra_sim * 0.85
 
 print(f"[INFO] Similarity threshold = {SIM_THRESHOLD:.3f}")
 
-# ============================================================
-# VIDEO
-# ============================================================
 cap = cv2.VideoCapture(VIDEO_PATH)
 if not cap.isOpened():
     raise RuntimeError("Video not found")
@@ -115,9 +94,6 @@ tracks = []
 frame_id = 0
 last_detect_frame = -999
 
-# ============================================================
-# MAIN LOOP
-# ============================================================
 while True:
     ret, frame = cap.read()
     if not ret:
@@ -125,7 +101,6 @@ while True:
 
     frame_id += 1
 
-    # ---------------- FAST PATH ----------------
     if frame_id - last_detect_frame < DETECT_EVERY:
         for t in tracks:
             if t["conf"] < CONFIRM_FRAMES:
@@ -137,7 +112,7 @@ while True:
             break
         continue
 
-    # ---------------- DETECTION ----------------
+    # detection
     last_detect_frame = frame_id
     h,w,_ = frame.shape
     raw_dets = []
@@ -167,7 +142,7 @@ while True:
                 if d[0] > mean_score + RELATIVE_MARGIN
             ]
 
-    # ---------------- CLUSTER + AVERAGE ----------------
+    # cluster + average
     raw_dets.sort(reverse=True, key=lambda x: x[0])
     clusters = []
 
@@ -201,7 +176,6 @@ while True:
     for c in clusters[:MAX_TRACKS]:
         detections.append((np.mean(c["scores"]), c["rep"]))
 
-    # ---------------- TRACK UPDATE ----------------
     for score, box in detections:
         matched = False
         for t in tracks:
@@ -219,7 +193,6 @@ while True:
                 "conf": 1
             })
 
-    # ---------------- TRACK DECAY ----------------
     new_tracks = []
     for t in tracks:
         t["hold"] -= 1
@@ -227,7 +200,7 @@ while True:
             new_tracks.append(t)
     tracks = new_tracks[:MAX_TRACKS]
 
-    # ---------------- DRAW ----------------
+    # drawing bounding boxs
     for t in tracks:
         if t["conf"] < CONFIRM_FRAMES:
             continue
